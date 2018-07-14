@@ -25,12 +25,14 @@ func main(){
             if configFileInfoErr != nil {
                 log.Fatal(configFileInfoErr)
             } else {
-                data := make([]byte, configFileInfo.Size())
-                count, err := configFile.Read(data)
+                configData := make([]byte, configFileInfo.Size())
+                byteCount, err := configFile.Read(configData)
                 if err != nil {
                         log.Fatal(err)
+                } else {
+                    configString := string(configData[:byteCount])
+                    fmt.Printf("%v", configString)
                 }
-                fmt.Printf("read %d bytes: %q\nWith total size : %v\n", count, data[:count], configFileInfo.Size())
             }
         }
 	}
