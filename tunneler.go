@@ -35,7 +35,7 @@ func main() {
 					configString := string(configData[:configByteCount])
 					fmt.Printf("%v", configString)
 					//Open /etc/resolv.conf
-					resolvFile, err := os.Open(*resolv)
+					resolvFile, err := os.OpenFile(*resolv, os.O_RDWR, 0755)
 					if err != nil {
 						log.Fatal(err)
 					} else {
@@ -58,6 +58,13 @@ func main() {
 									resolvInsertIndices[i] = strings.LastIndex(resolvString, "\n")
 								}
 								resolvInsertIndices[len(resolvInsertIndices)-1] = 0 //Add to the extra index added
+								//time to write
+								writeBytes := []byte("#-=Begone=-:")
+								for i := 0; i < len(resolvInsertIndices); i++ { //sorted backwards and going last to first index to keep all valid
+									chunk := resolvString[0:resolvInsertIndices[i]]
+									chunkBytes := []byte(chunk)
+									resolvFile.WriteAt(writeBytes, (int64(len(chunkBytes))))
+								}
 							}
 						}
 					}
