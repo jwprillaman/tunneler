@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -55,15 +56,40 @@ func main() {
 								var resolvInsertIndices = make([]int, resolvNewlineCount+1)
 
 								for i := 0; i < resolvNewlineCount; i++ {
-									resolvInsertIndices[i] = strings.LastIndex(resolvString, "\n")
+									var testString string
+									if i != 0 {
+										testString = resolvString[0:resolvInsertIndices[i-1]]
+									} else {
+										testString = resolvString
+									}
+									lastIndex := strings.LastIndex(testString, "\n")
+									resolvInsertIndices[i] = lastIndex
 								}
 								resolvInsertIndices[len(resolvInsertIndices)-1] = 0 //Add to the extra index added
+								sort.Ints(resolvInsertIndices)
+								fmt.Printf("%v\n", resolvInsertIndices)
+
 								//time to write
 								writeBytes := []byte("#-=Begone=-:")
-								for i := 0; i < len(resolvInsertIndices); i++ { //sorted backwards and going last to first index to keep all valid
-									chunk := resolvString[0:resolvInsertIndices[i]]
-									chunkBytes := []byte(chunk)
-									resolvFile.WriteAt(writeBytes, (int64(len(chunkBytes))))
+								for i := 0; i < len(resolvInsertIndices); i++ {
+									fmt.Printf("For index : %v\n", resolvInsertIndices[i])
+									preChunkBytes := []byte(resolvString[0:resolvInsertIndices[i]])
+									postChunkByteStartIndex := resolvInsertIndices[i]
+									if resolvInsertIndices[i] != 0 {
+										postChunkByteStartIndex++
+									}
+									postChunkBytes := []byte(resolvString[postChunkByteStartIndex:len(resolvString)])
+									newPostChunkBytes := append(writeBytes, postChunkBytes...)
+									fmt.Printf("writting : %v\n", string(newPostChunkBytes[:len(newPostChunkBytes)]))
+									fmt.Printf("at the index of : %v\n", int64((len(preChunkBytes))+(i*len(writeBytes))))
+									startWriteIndex := int64(len(preChunkBytes)) + (int64(i) * (int64(len(writeBytes))))
+
+									written, err := resolvFile.WriteAt(newPostChunkBytes, startWriteIndex)
+									if err != nil {
+										log.Fatal(err)
+									} else {
+										fmt.Printf("Wrote : %v\n", written)
+									}
 								}
 							}
 						}
