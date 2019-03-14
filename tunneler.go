@@ -40,7 +40,7 @@ func isSetMode() (bool, error) {
 }
 
 func set() error {
-	resolveFile, err := os.Open(*resolv)
+	resolveFile, err := os.OpenFile(*resolv, os.O_RDWR, 0775)
 	if err != nil {
 		panic(err)
 	}
@@ -66,10 +66,16 @@ func set() error {
 		builder.WriteString(configScanner.Text())
 		builder.WriteString("\n")
 	}
-
-	configString := builder.String()
-
-	fmt.Println(configString)
+	//build string and set seek to start of file
+	resolvString := builder.String()
+	resolveFile.Seek(0,0)
+	//write the new resolve to the file
+	writer := bufio.NewWriter(resolveFile)
+	_, err = writer.WriteString(resolvString)
+	if err != nil {
+		panic(err)
+	}
+	writer.Flush()
 	return nil
 }
 
@@ -85,15 +91,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if isSet {
-		fmt.Println("Mode : Set")
-	} else {
-		fmt.Println("Mode : Unset")
-	}
-
 	if isSet && *config == "" {
 		panic("Please provide a valid configuration file via the -c flag.")
 	}
-	fmt.Printf("Using : %v\n", config)
-	set()
+	err = set()
+	if err != nil {
+		panic(err)
+	}
+	//report success
+	if isSet {
+		fmt.Println("resolv set")
+	} else {
+		fmt.Println("resolv unset")
+	}
 }
