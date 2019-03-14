@@ -1,14 +1,20 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"os"
-	"sort"
 	"strings"
 )
+
+const (
+	commentToken = "#-=tunneler=-#"
+)
+
+var config *string
+var resolv *string
 
 func isSetMode() (bool, error) {
 	output := false
@@ -33,11 +39,45 @@ func isSetMode() (bool, error) {
 	return output, err
 }
 
+func set() error {
+	resolveFile, err := os.Open(*resolv)
+	if err != nil {
+		panic(err)
+	}
+	defer resolveFile.Close()
+
+	configFile, err := os.Open(*config)
+	if err != nil {
+		panic(err)
+	}
+	defer configFile.Close()
+
+	builder := strings.Builder{}
+	resolvScanner := bufio.NewScanner(resolveFile)
+	//write token followed by each line for current resolv
+	for resolvScanner.Scan() {
+		builder.WriteString(commentToken)
+		builder.WriteString(resolvScanner.Text())
+		builder.WriteString("\n")
+	}
+	//write config file
+	configScanner := bufio.NewScanner(configFile)
+	for configScanner.Scan() {
+		builder.WriteString(configScanner.Text())
+		builder.WriteString("\n")
+	}
+
+	configString := builder.String()
+
+	fmt.Println(configString)
+	return nil
+}
+
 func main() {
 
 	//get flags
-	var config = flag.String("c", "", "Configuation file to mimic.")
-	var resolv = flag.String("r", "/etc/resolv.conf", "resolv.conf")
+	config = flag.String("c", "", "Configuation file to mimic.")
+	resolv = flag.String("r", "/etc/resolv.conf", "resolv.conf")
 	flag.Bool("s", true, "set resolv to config")
 	flag.Bool("u", true, "unset config in resolv")
 	flag.Parse()
@@ -51,82 +91,9 @@ func main() {
 		fmt.Println("Mode : Unset")
 	}
 
-	if *config == "" {
-		log.Fatal("Please provide a valid configuration file via the -c flag.")
-	} else { //continue normally
-		fmt.Printf("Using : %v\n", *config)
-		//Open config
-		configFile, err := os.Open(*config)
-		if err != nil {
-			panic(err)
-		}
-		//Open config file and read it
-		var configFileInfo, configFileInfoErr = configFile.Stat()
-		if configFileInfoErr != nil {
-			panic(configFileInfoErr)
-		}
-		configData := make([]byte, configFileInfo.Size())
-		configByteCount, err := configFile.Read(configData)
-		if err != nil {
-			panic(err)
-		}
-		configString := string(configData[:configByteCount])
-		fmt.Printf("%v", configString)
-		//Open /etc/resolv.conf
-		resolvFile, err := os.OpenFile(*resolv, os.O_RDWR, 0755)
-		if err != nil {
-			panic(err)
-		}
-		var resolvFileInfo, resolvFileInfoErr = resolvFile.Stat()
-		if resolvFileInfoErr != nil {
-			log.Fatal(resolvFileInfoErr)
-		}
-		fmt.Printf("%v\n", resolvFileInfo.Size())
-		resolvData := make([]byte, resolvFileInfo.Size())
-		resolvByteCount, err := resolvFile.Read(resolvData)
-		if err != nil {
-			panic(err)
-		}
-		resolvString := string(resolvData[:resolvByteCount])
-		fmt.Printf("%v", resolvString)
-		resolvNewlineCount := strings.Count(resolvString, "\n")
-		var resolvInsertIndices = make([]int, resolvNewlineCount+1)
-
-		for i := 0; i < resolvNewlineCount; i++ {
-			var testString string
-			if i != 0 {
-				testString = resolvString[0:resolvInsertIndices[i-1]]
-			} else {
-				testString = resolvString
-			}
-			lastIndex := strings.LastIndex(testString, "\n")
-			resolvInsertIndices[i] = lastIndex
-		}
-		resolvInsertIndices[len(resolvInsertIndices)-1] = 0 //Add to the extra index added
-		sort.Ints(resolvInsertIndices)
-		fmt.Printf("%v\n", resolvInsertIndices)
-
-		//time to write
-		writeBytes := []byte("#-=Begone=-:")
-		for i := 0; i < len(resolvInsertIndices); i++ {
-			fmt.Printf("For index : %v\n", resolvInsertIndices[i])
-			preChunkBytes := []byte(resolvString[0:resolvInsertIndices[i]])
-			postChunkByteStartIndex := resolvInsertIndices[i]
-			if resolvInsertIndices[i] != 0 {
-				postChunkByteStartIndex++
-			}
-			postChunkBytes := []byte(resolvString[postChunkByteStartIndex:len(resolvString)])
-			newPostChunkBytes := append(writeBytes, postChunkBytes...)
-			fmt.Printf("writting : %v\n", string(newPostChunkBytes[:len(newPostChunkBytes)]))
-			fmt.Printf("at the index of : %v\n", int64((len(preChunkBytes))+(i*len(writeBytes))))
-			startWriteIndex := int64(len(preChunkBytes)) + (int64(i) * (int64(len(writeBytes))))
-
-			written, err := resolvFile.WriteAt(newPostChunkBytes, startWriteIndex)
-			if err != nil {
-				log.Fatal(err)
-			} else {
-				fmt.Printf("Wrote : %v\n", written)
-			}
-		}
+	if isSet && *config == "" {
+		panic("Please provide a valid configuration file via the -c flag.")
 	}
+	fmt.Printf("Using : %v\n", config)
+	set()
 }
