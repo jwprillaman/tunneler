@@ -68,8 +68,38 @@ func set() error {
 	}
 	//build string and set seek to start of file
 	resolvString := builder.String()
-	resolveFile.Seek(0,0)
+	resolveFile.Seek(0, 0)
 	//write the new resolve to the file
+	writer := bufio.NewWriter(resolveFile)
+	_, err = writer.WriteString(resolvString)
+	if err != nil {
+		panic(err)
+	}
+	writer.Flush()
+	return nil
+}
+
+func unset() error {
+	resolveFile, err := os.OpenFile(*resolv, os.O_RDWR, 0775)
+	if err != nil {
+		panic(err)
+	}
+	defer resolveFile.Close()
+
+	builder := strings.Builder{}
+	resolvScanner := bufio.NewScanner(resolveFile)
+	for resolvScanner.Scan() {
+		text := resolvScanner.Text()
+		if strings.HasPrefix(text, commentToken) {
+			builder.WriteString(text[len(commentToken):])
+			builder.WriteString("\n")
+		}
+	}
+
+	resolvString := builder.String()
+	resolveFile.Truncate(0)
+	resolveFile.Seek(0, 0)
+	//write new file
 	writer := bufio.NewWriter(resolveFile)
 	_, err = writer.WriteString(resolvString)
 	if err != nil {
@@ -94,14 +124,12 @@ func main() {
 	if isSet && *config == "" {
 		panic("Please provide a valid configuration file via the -c flag.")
 	}
-	err = set()
-	if err != nil {
-		panic(err)
-	}
 	//report success
 	if isSet {
+		err = set()
 		fmt.Println("resolv set")
 	} else {
+		err = unset()
 		fmt.Println("resolv unset")
 	}
 }
