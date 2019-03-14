@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -9,12 +10,46 @@ import (
 	"strings"
 )
 
+func isSetMode() (bool, error) {
+	output := false
+	var err error = nil
+	foundUnset := false
+
+	flag.Visit(func(f *flag.Flag) {
+		//look for set flag lexicographically
+		if f.Name == "s" {
+			output = true
+		}
+		//will hit set before unset so we can check output now
+		if f.Name == "u" {
+			foundUnset = true
+		}
+	})
+	//return error if neither s or u is set
+	if !output && !foundUnset {
+		err = errors.New("Flag s to set or u to unset is a require parameter")
+	}
+
+	return output, err
+}
+
 func main() {
 
 	//get flags
 	var config = flag.String("c", "", "Configuation file to mimic.")
 	var resolv = flag.String("r", "/etc/resolv.conf", "resolv.conf")
+	flag.Bool("s", true, "set resolv to config")
+	flag.Bool("u", true, "unset config in resolv")
 	flag.Parse()
+	isSet, err := isSetMode()
+	if err != nil {
+		panic(err)
+	}
+	if isSet {
+		fmt.Println("Mode : Set")
+	} else {
+		fmt.Println("Mode : Unset")
+	}
 
 	if *config == "" {
 		log.Fatal("Please provide a valid configuration file via the -c flag.")
