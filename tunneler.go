@@ -5,7 +5,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -39,6 +41,35 @@ func isSetMode() (bool, error) {
 	return output, err
 }
 
+func getConfigFile() string{
+	output := ""
+
+	if (*config != ""){
+		output = *config
+	} else {
+		//look for config in current directory
+		files, err := ioutil.ReadDir("./")
+		if err != nil {
+			panic(err)
+		}
+		for _, file := range files {
+			if strings.HasSuffix(file.Name(), ".conf") {
+				fullPath, err :=filepath.Abs(file.Name())
+				if err != nil {
+					panic(err)
+				}
+				output = fullPath
+			}
+		}
+	}
+
+	if output == "" {
+		panic(errors.New("Unable to find config file"))
+	}
+
+	return output
+}
+
 func set() error {
 	resolveFile, err := os.OpenFile(*resolv, os.O_RDWR, 0775)
 	if err != nil {
@@ -46,7 +77,7 @@ func set() error {
 	}
 	defer resolveFile.Close()
 
-	configFile, err := os.Open(*config)
+	configFile, err := os.Open(getConfigFile())
 	if err != nil {
 		panic(err)
 	}
@@ -120,9 +151,6 @@ func main() {
 	isSet, err := isSetMode()
 	if err != nil {
 		panic(err)
-	}
-	if isSet && *config == "" {
-		panic("Please provide a valid configuration file via the -c flag.")
 	}
 	//report success
 	if isSet {
