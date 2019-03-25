@@ -7,12 +7,12 @@ automated tool for sercuring vpn access
 
 Set resolv to current config
 ```
-$tunneler -s
+$sudo tunneler -s
 ```
 
 Sunset the resolv
 ```
-$tunneler -u
+$sudo tunneler -u
 ```
 
 Tunneler has two modes used to set the configuration. If no configuration flag (-c) is set for a config location it will look in the current directory for a file this suffix .conf. The resolve defaults to /etc/resonv if none is set with the flag (-r).
