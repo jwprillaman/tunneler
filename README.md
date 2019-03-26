@@ -15,19 +15,24 @@ Sunset the resolv
 $sudo tunneler -u
 ```
 
-Tunneler has two modes used to set the configuration. If no configuration flag (-c) is set for a config location it will look in the current directory for a file this suffix .conf. The resolve defaults to /etc/resonv if none is set with the flag (-r).
+Tunneler requires one of set or unset modes to be set.
 
 
-#### Set
+#### Flags
+
+##### set  -s  
 sets the config to be the contents on resolv file
 
-flag -s
-
-
-#### Unset
+##### unset -u
 return config to its original contents before set
 
-flag -u
+##### config -c
+set the config file to set resolv from. Defaults to the first file found in base directory with .conf suffix.
+
+##### resolv -r
+set the resolv file to be set or unset. Defaults to /etc/resolv.conf
+
+
 
 
 
